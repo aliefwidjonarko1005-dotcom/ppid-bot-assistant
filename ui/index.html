@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+    <title>PPID Bot Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <!-- Navigation Rail (Far Left) -->
+        <nav class="nav-rail">
+            <div class="nav-top">
+                <button class="nav-icon active" data-view="chats" title="Chats">
+                    💬
+                    <span class="badge" id="alert-badge" style="display:none;">0</span>
+                </button>
+                <button class="nav-icon" data-view="dashboard" title="Dashboard">
+                    📊
+                </button>
+                <button class="nav-icon" data-view="training" title="Training">
+                    📚
+                </button>
+                <button class="nav-icon" data-view="evaluations" title="Evaluasi & Perbaikan">
+                    📋
+                    <span class="badge" id="eval-badge" style="display:none;">0</span>
+                </button>
+            </div>
+            <div class="nav-bottom">
+                <button class="nav-icon" data-view="settings" title="Settings">
+                    ⚙️
+                </button>
+                <div class="profile-icon" id="connection-status">
+                    <div class="status-dot offline"></div>
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"
+                        alt="Profile">
+                </div>
+            </div>
+        </nav>
+
+        <!-- Secondary Sidebar (Chat List / Menu) -->
+        <aside class="sub-sidebar" id="sub-sidebar">
+            <!-- Header for Sub-Sidebar -->
+            <div class="sub-sidebar-header">
+                <h2 id="sidebar-title">Chats</h2>
+                <div class="header-actions">
+                    <button class="icon-btn" id="toggle-bot-sidebar" title="Toggle Bot status">▶️</button>
+                    <button class="icon-btn" id="logout-btn" title="Logout">🚪</button>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="search-bar-container">
+                <div class="search-bar">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" placeholder="Search or start new chat">
+                </div>
+            </div>
+
+            <!-- Content Area for Sub-Sidebar (Dynamic) -->
+            <div class="sub-sidebar-content">
+                <!-- Chat List (Default) -->
+                <div id="chat-list" class="chat-list-container active">
+                    <div class="empty-state">
+                        <p>Belum ada percakapan</p>
+                    </div>
+                </div>
+
+                <!-- Dashboard Menu (Hidden by default) -->
+                <!-- Dashboard Menu (Hidden by default) -->
+                <div id="dashboard-menu" class="menu-list-container">
+                    <!-- Boxed Stats in Sidebar -->
+                    <div class="sidebar-stats-box">
+                        <div class="menu-item-static">
+                            <span class="stat-label">Total Pesan</span>
+                            <span class="stat-value" id="stat-total-sidebar">0</span>
+                        </div>
+                        <div class="menu-item-static">
+                            <span class="stat-label">Alerts</span>
+                            <span class="stat-value" id="stat-alerts-sidebar">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard View -->
+            <div class="view active" id="dashboard-view">
+                <header class="view-header">
+                    <h2>Dashboard</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" id="toggle-bot-dashboard">
+                            ▶️ Start Bot
+                        </button>
+                    </div>
+                </header>
+
+                <div class="dashboard-grid">
+                    <!-- Stats Card (Hero) -->
+                    <div class="card stats-card">
+                        <h3>📈 Statistik Hari Ini</h3>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-value" id="stat-total">0</span>
+                                <span class="stat-label">Total Pesan</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="stat-handled">0</span>
+                                <span class="stat-label">Diproses</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="stat-alerts">0</span>
+                                <span class="stat-label">Alerts</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- QR Code Card -->
+                    <div class="card qr-card">
+                        <h3>📱 Status Koneksi</h3>
+                        <div class="qr-container" id="qr-container">
+                            <div class="qr-placeholder">
+                                <p>Klik "Start Bot" untuk memulai</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Survey Stats Card -->
+                    <div class="card survey-card">
+                        <h3>⭐ Kepuasan Pelanggan</h3>
+                        <div class="survey-stats">
+                            <div class="survey-summary">
+                                <div class="rating-big">
+                                    <span id="survey-avg">0.0</span>
+                                    <span class="out-of">/ 10</span>
+                                </div>
+                                <div class="rating-total">Dari <span id="survey-count">0</span> ulasan</div>
+                            </div>
+                            <div class="survey-chart" id="survey-chart">
+                                <div class="chart-placeholder">Belum ada data</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Log Card -->
+                    <div class="card log-card">
+                        <h3>📋 Log Aktivitas</h3>
+                        <div class="log-container" id="log-container">
+                            <div class="log-entry info">Siap digunakan. Klik Start Bot untuk memulai.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Monitor View -->
+            <!-- Chat Monitor View -->
+            <div class="view" id="chats-view">
+                <!-- Chat Detail Only (List is in Sidebar) -->
+                <div class="chat-container">
+                    <div class="chat-detail" id="chat-detail">
+                        <div class="empty-state">
+                            <p>Pilih percakapan dari sidebar untuk melihat detail</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Training View -->
+            <div class="view" id="training-view">
+                <header class="view-header">
+                    <h2>📚 Training & Dokumen</h2>
+                </header>
+
+                <div class="training-container">
+                    <!-- Upload Section -->
+                    <div class="card">
+                        <h3>📄 Upload Dokumen / Chat History</h3>
+                        <div class="upload-zone" id="upload-zone">
+                            <p>🗂️ Drag & drop file PDF atau TXT di sini</p>
+                            <p class="small">PDF (SOP) atau TXT (WhatsApp Export)</p>
+                            <input type="file" id="file-input" accept=".pdf, .txt" multiple hidden>
+                        </div>
+                        <div class="file-list" id="file-list"></div>
+                        <button class="btn btn-primary" id="reindex-btn">
+                            🔄 Re-index Dokumen
+                        </button>
+                    </div>
+
+                    <!-- Live Training Mode -->
+                    <div class="card live-training-card">
+                        <h3>🧠 Live Training Mode</h3>
+                        <p class="small">Latih AI seperti chat biasa. Kirim pertanyaan, lihat jawaban, lalu koreksi jika
+                            salah.</p>
+                        <div class="training-chat" id="training-chat">
+                            <div class="training-message system">Mulai dengan mengirim pertanyaan contoh...</div>
+                        </div>
+                        <div class="training-input-area">
+                            <input type="text" id="training-question" placeholder="Ketik pertanyaan customer...">
+                            <button class="btn" id="training-send-btn">Kirim</button>
+                        </div>
+                        <div class="training-correction-area" id="training-correction-area" style="display: none;">
+                            <p><strong>Koreksi jawaban:</strong></p>
+                            <textarea id="training-correction" placeholder="Ketik jawaban yang benar..."></textarea>
+                            <button class="btn btn-primary" id="training-teach-btn">💡 Ajarkan ke AI</button>
+                            <button class="btn" id="training-skip-btn">Skip (Jawaban sudah benar)</button>
+                        </div>
+                    </div>
+
+                    <!-- Ingested Documents List -->
+                    <div class="card">
+                        <h3>📂 Dokumen Teringesti</h3>
+                        <div class="ingested-docs-list" id="ingested-docs-list">
+                            <div class="empty-state">
+                                <p>Belum ada dokumen</p>
+                            </div>
+                        </div>
+                        <button class="btn" id="refresh-docs-btn">🔄 Refresh List</button>
+                    </div>
+
+                    <!-- Customer Questions (Knowledge Gaps) -->
+                    <div class="card knowledge-gaps-card">
+                        <h3>❓ Pertanyaan Customer (Belum Terjawab)</h3>
+                        <p class="small">Pertanyaan dari customer yang tidak bisa dijawab AI.</p>
+                        <div class="knowledge-gaps-list" id="customer-gaps-list">
+                            <div class="empty-state">
+                                <p>Tidak ada</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI-Generated Questions -->
+                    <div class="card ai-gaps-card">
+                        <h3>💡 Pertanyaan AI-Generated</h3>
+                        <p class="small">Pertanyaan yang mungkin ditanyakan namun AI belum bisa jawab.</p>
+                        <div class="knowledge-gaps-list" id="ai-gaps-list">
+                            <div class="empty-state">
+                                <p>Tidak ada</p>
+                            </div>
+                        </div>
+                        <button class="btn" id="generate-questions-btn">💡 Generate Pertanyaan dari Dokumen</button>
+                    </div>
+                </div> <!-- End training-container -->
+            </div> <!-- End training-view -->
+
+            <!-- Evaluations View (New) -->
+            <div class="view" id="evaluations-view">
+                <header class="view-header">
+                    <h2>Evaluasi & Perbaikan</h2>
+                    <span style="font-size: 13px; color: var(--text-secondary);">Feedback pengguna dengan rating
+                        rendah (< 3)</span>
+                </header>
+                <div class="dashboard-grid" style="grid-template-columns: 350px 1fr; gap: 24px; padding: 24px;">
+                    <!-- List Column -->
+                    <div class="card"
+                        style="padding: 0; overflow: hidden; display: flex; flex-direction: column; min-height: 500px;">
+                        <h3 style="margin: 20px 24px;">Daftar Masukan</h3>
+                        <div id="eval-list" style="flex:1; overflow-y: auto;">
+                            <!-- Items will be injected here -->
+                            <div class="empty-state">Belum ada data evaluasi</div>
+                        </div>
+                    </div>
+
+                    <!-- Detail/Action Column -->
+                    <div class="card" style="min-height: 500px;">
+                        <div id="eval-detail-placeholder" class="empty-state"
+                            style="display:flex; flex-direction:column; justify-content:center; height:100%;">
+                            <p>Pilih item dari daftar untuk diproses</p>
+                        </div>
+
+                        <div id="eval-action-area" style="display:none;">
+                            <div
+                                style="margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 15px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <h3 id="eval-customer-name" style="margin:0;">Nama Customer</h3>
+                                    <span class="badge" style="background:var(--danger); color:white;">Rating: <span
+                                            id="eval-rating-display">1</span>/5</span>
+                                </div>
+                                <p style="color: var(--text-secondary); font-size: 12px; margin-top:5px;"
+                                    id="eval-time">Waktu</p>
+                            </div>
+
+                            <div
+                                style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 3px solid var(--danger);">
+                                <h4 style="color: var(--text-primary); margin-bottom: 8px; font-size:14px;">Masukan
+                                    / Komentar:</h4>
+                                <p id="eval-feedback-text"
+                                    style="font-size: 15px; line-height: 1.5; font-style:italic;">...</p>
+                            </div>
+
+                            <div style="margin-bottom: 20px;">
+                                <h4 style="margin-bottom: 10px; color:var(--primary);">Tindakan Perbaikan:</h4>
+                                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;">
+                                    Apa yang seharusnya dijawab bot untuk konteks ini? (Ini akan ditambahkan ke
+                                    Knowledge Base)
+                                </p>
+                                <label style="display:block; margin-bottom:5px; font-size:12px;">Konteks Pertanyaan
+                                    (Bot akan mencocokkan ini)</label>
+                                <input type="text" id="eval-question-input"
+                                    placeholder="Contoh: Bagaimana cara membuat KTP?"
+                                    style="width:100%; padding: 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-input); color: white; margin-bottom: 15px;">
+
+                                <label style="display:block; margin-bottom:5px; font-size:12px;">Jawaban
+                                    Benar</label>
+                                <textarea id="eval-answer-input" rows="5"
+                                    style="width:100%; padding: 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-input); color: white; resize: vertical;"
+                                    placeholder="Tulis jawaban yang benar..."></textarea>
+                            </div>
+
+                            <div style="display:flex; justify-content: flex-end; gap: 10px; margin-top:20px;">
+                                <button class="btn" id="eval-ignore-btn"
+                                    style="background: transparent; border: 1px solid var(--border);">Abaikan</button>
+                                <button class="btn btn-primary" id="eval-train-btn">Simpan & Latih AI 🧠</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div class="view" id="settings-view">
+                <header class="view-header">
+                    <h2>⚙️ Pengaturan</h2>
+                </header>
+
+                <div class="settings-container">
+                    <div class="card">
+                        <h3>🤖 Pengaturan AI</h3>
+                        <div class="setting-item">
+                            <label>Model Ollama</label>
+                            <select id="model-select">
+                                <option value="ppid-assistant">ppid-assistant (default)</option>
+                                <option value="llama3.2:3b">llama3.2:3b</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label>Temperature (kreativitas)</label>
+                            <input type="range" id="temperature" min="0" max="1" step="0.1" value="0.6">
+                            <span id="temp-value">0.6</span>
+                        </div>
+                        <div class="setting-item">
+                            <label>Tingkat Humor AI (0-100%)</label>
+                            <div class="slider-container">
+                                <input type="range" id="humor-level" min="0" max="100" step="10" value="0">
+                                <span id="humor-value">0%</span>
+                            </div>
+                            <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+                                0% = Formal (Kaku)<br>
+                                50% = Ramah & Santai<br>
+                                100% = Lucu & Gaul (Sesuai Konteks)
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>⏱️ Pengaturan Response</h3>
+                        <div class="setting-item">
+                            <label>Delay minimum (ms)</label>
+                            <input type="number" id="min-delay" value="1000" min="500" max="5000">
+                        </div>
+                        <div class="setting-item">
+                            <label>Delay maksimum (ms)</label>
+                            <input type="number" id="max-delay" value="2000" min="1000" max="10000">
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" id="save-settings">💾 Simpan Pengaturan</button>
+                    <div id="save-status" style="margin-top: 10px; display: none;"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Takeover Modal -->
+    <div class="modal" id="takeover-modal">
+        <div class="modal-content">
+            <h3>💬 Ambil Alih Percakapan</h3>
+            <div class="modal-chat-history" id="modal-chat-history"></div>
+            <textarea id="manual-reply" placeholder="Ketik balasan manual..."></textarea>
+            <div class="modal-actions">
+                <button class="btn" id="cancel-takeover">Batal</button>
+                <button class="btn btn-primary" id="send-takeover">Kirim</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Inline Save Handler for simplicity (or move to app.js)
+        document.getElementById('save-settings').addEventListener('click', async () => {
+            const btn = document.getElementById('save-settings');
+            const status = document.getElementById('save-status');
+            const humorLevel = document.getElementById('humor-level').value;
+            const temp = document.getElementById('temperature').value;
+
+            btn.disabled = true;
+            btn.textContent = 'Menyimpan...';
+
+            try {
+                // Call IPC to save settings
+                const result = await window.ppidBot.saveSettings({
+                    humorLevel: parseInt(humorLevel),
+                    temperature: parseFloat(temp)
+                });
+
+                if (result.success) {
+                    status.innerHTML = '✅ Pengaturan tersimpan!';
+                    status.style.color = 'var(--success)';
+                } else {
+                    status.innerHTML = '❌ Gagal: ' + result.error;
+                    status.style.color = 'var(--danger)';
+                }
+            } catch (e) {
+                status.innerHTML = '❌ Error: ' + e.message;
+                status.style.color = 'var(--danger)';
+            }
+
+            status.style.display = 'block';
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.textContent = '💾 Simpan Pengaturan';
+                status.style.display = 'none';
+            }, 2000);
+        });
+    </script>
+</body>
+
+</html>

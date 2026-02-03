@@ -1,0 +1,71 @@
+{
+  "name": "ppid-bot-assistant",
+  "version": "1.0.0",
+  "description": "PPID WhatsApp Bot dengan AI lokal - Desktop Application",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "bot": "node src/index.js",
+    "ingest": "node scripts/ingestDocs.js",
+    "build": "electron-builder"
+  },
+  "build": {
+    "appId": "com.ppid.bot-assistant",
+    "productName": "PPID Bot Assistant",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "dokumen_ppid",
+        "to": "dokumen_ppid"
+      },
+      {
+        "from": "data",
+        "to": "data"
+      }
+    ],
+    "asar": false,
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "PPID Bot",
+      "createDesktopShortcut": true
+    }
+  },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "ppid",
+    "ollama",
+    "electron"
+  ],
+  "author": "PPID",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@langchain/community": "^0.3.0",
+    "@langchain/core": "^0.3.0",
+    "@langchain/groq": "^1.0.3",
+    "@whiskeysockets/baileys": "^6.5.0",
+    "dotenv": "^16.4.0",
+    "langchain": "^0.3.0",
+    "pdf-parse": "^1.1.1",
+    "pino": "^9.0.0",
+    "qrcode": "^1.5.3",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "devDependencies": {
+    "copyfiles": "^2.4.1",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}

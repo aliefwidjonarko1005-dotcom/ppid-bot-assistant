@@ -1,0 +1,13 @@
+node_modules/
+.env
+data/vectorstore/*
+!data/vectorstore/.gitkeep
+data/wwebjs_auth/*
+!data/wwebjs_auth/.gitkeep
+*.log
+.DS_Store
+Thumbs.db
+dist/
+.idea/
+.vscode/
+data/settings.json
