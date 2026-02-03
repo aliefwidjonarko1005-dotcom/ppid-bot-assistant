@@ -148,7 +148,7 @@ function startBot() {
         }
 
         console.error(`[BOT ERR] ${err}`);
-        if (mainWindow) mainWindow.webContents.send('bot-error', err);
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('bot-error', err);
     });
 
     // CAPTURE STDOUT (For logs)
@@ -159,7 +159,7 @@ function startBot() {
     // HANDLE EXIT
     botProcess.on('exit', (code) => {
         console.log(`Bot process exited with code ${code}`);
-        if (code !== 0 && mainWindow) {
+        if (code !== 0 && mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('bot-error', `Bot process exited with code ${code}`);
             mainWindow.webContents.send('bot-status', { running: false });
         }
@@ -168,14 +168,14 @@ function startBot() {
     // HANDLE SPAWN ERROR
     botProcess.on('error', (err) => {
         console.error('Failed to start bot:', err);
-        if (mainWindow) mainWindow.webContents.send('bot-error', `Failed to spawn: ${err.message}`);
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('bot-error', `Failed to spawn: ${err.message}`);
     });
 
     botProcess.on('message', (msg) => {
         // DEBUG: Trace all messages
         console.log('[IPC RAW]', msg.type);
 
-        if (mainWindow) {
+        if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('bot-message', msg);
         }
 
@@ -186,13 +186,13 @@ function startBot() {
 
         // Handle logout
         if (msg.type === 'logged-out') {
-            if (mainWindow) {
+            if (mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send('bot-status', { running: false });
                 mainWindow.webContents.send('bot-message', { type: 'logged-out' });
             }
         }
         else if (msg.type === 'survey-update') {
-            if (mainWindow) {
+            if (mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send('survey-stats', msg);
             }
         }

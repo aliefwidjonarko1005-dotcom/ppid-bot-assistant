@@ -576,7 +576,12 @@ body {
 
 .live-training-card {
     grid-column: 1 / -1;
-    /* Full width */
+    /* Flex layout for proper chat scrolling */
+    display: flex;
+    flex-direction: column;
+    height: 80vh;
+    /* Fixed height relative to viewport */
+    min-height: 600px;
 }
 
 .training-chat {
@@ -586,18 +591,25 @@ body {
     background-size: 400px;
     border-radius: 8px;
     padding: 20px;
-    min-height: 400px;
-    max-height: 500px;
+
+    /* Flex child props */
+    flex: 1;
+    min-height: 0;
+    /* Critical for scroll inside flex */
     overflow-y: auto;
+
     display: flex;
     flex-direction: column;
     border: 1px solid var(--border);
+    scroll-behavior: smooth;
 }
 
 .training-input-area {
     margin-top: 16px;
     display: flex;
     gap: 12px;
+    flex-shrink: 0;
+    /* Prevent shrinking */
 }
 
 .training-input-area input {
