@@ -60,6 +60,9 @@ contextBridge.exposeInMainWorld('ppidBot', {
     getEvaluations: () => ipcRenderer.invoke('get-evaluations'),
     resolveEvaluation: (id, action) => ipcRenderer.invoke('resolve-evaluation', { id, action }),
 
+    // Recaps
+    getRecaps: () => ipcRenderer.invoke('get-recaps'),
+
     // Internship Data
     getInternships: () => ipcRenderer.invoke('get-internship-data'),
     saveInternships: (data) => ipcRenderer.invoke('save-internship-data', data),

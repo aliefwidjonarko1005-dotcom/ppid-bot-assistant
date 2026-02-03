@@ -4,8 +4,9 @@
  */
 
 import logger from '../utils/logger.js';
+import { summarizeConversation } from '../ai/groq.js';
 
-// Conversation sessions: chatId -> { lastActivity, surveyPending, messageCount }
+// Conversation sessions: chatId -> { lastActivity, surveyPending, messageCount, buffer: [] }
 const sessions = new Map();
 
 // Survey results: Array of { chatId, rating, timestamp }
@@ -26,6 +27,20 @@ export function setSocket(sock) {
 }
 
 /**
+ * Add message to session buffer for recap context
+ */
+export function addMessageToBuffer(chatId, role, text) {
+    const session = sessions.get(chatId);
+    if (!session) return;
+
+    if (!session.buffer) session.buffer = [];
+    session.buffer.push({ role, text, timestamp: Date.now() });
+
+    // Keep buffer manageable (last 30 messages)
+    if (session.buffer.length > 30) session.buffer.shift();
+}
+
+/**
  * Start or update a conversation session
  */
 export function updateSession(chatId, customerName = null) {
@@ -38,6 +53,7 @@ export function updateSession(chatId, customerName = null) {
         messageCount: (existing?.messageCount || 0) + 1,
         customerName: customerName || existing?.customerName || null,
         needsFollowUp: false,
+        buffer: existing?.buffer || [] // Persist buffer
     });
 }
 
@@ -126,6 +142,10 @@ export async function recordFeedback(chatId, feedback) {
         session.feedbackPending = false;
 
         logger.info(`Feedback recorded from ${chatId}: ${feedback}`);
+
+        // Generate Recap with final rating
+        generateRecap(chatId, session.lastRating);
+
     } catch (e) {
         logger.error('Failed to save feedback:', e);
     }
@@ -176,6 +196,12 @@ export function recordSurvey(chatId, rating) {
 
     // Save to file for persistence
     saveSurveyResults();
+
+    // Generate Recap for good scores
+    if (session && score >= 3) {
+        generateRecap(chatId, score);
+    }
+
     return false; // No follow up needed (Good Score)
 }
 
@@ -304,21 +330,81 @@ async function loadSurveyResults() {
 /**
  * Initialize conversation manager
  */
-export function initConversationManager() {
-    // Load existing survey results
-    loadSurveyResults();
+// ==========================================
+// RECAP SYSTEM
+// ==========================================
+const RECAP_FILE = join(process.env.DATA_PATH || join(__dirname, '../../data'), 'recaps.json');
+let recaps = [];
 
-    // Start periodic check for inactive conversations
-    setInterval(checkInactiveConversations, CHECK_INTERVAL);
-
-    logger.info('Conversation manager initialized');
+// Load Recaps on Init
+async function loadRecaps() {
+    try {
+        const data = await fs.readFile(RECAP_FILE, 'utf-8');
+        recaps = JSON.parse(data);
+        logger.info(`Loaded ${recaps.length} conversation recaps`);
+    } catch (e) {
+        // File might not exist
+    }
 }
 
-/**
- * Check if waiting for survey
- */
-export function isWaitingForSurvey(chatId) {
-    return sessions.get(chatId)?.surveyPending || false;
+// Generate Recap for a session
+export async function generateRecap(chatId, finalRating = null) {
+    const session = sessions.get(chatId);
+    if (!session || !session.buffer || session.buffer.length < 2) return;
+
+    // Avoid duplicate recaps for same session unless new messages
+    // Simple check: if last recap was < 5 mins ago? 
+    // Better: Just overwrite/update based on chatId for now, or append history. 
+    // Design: New recap per conversation closure.
+
+    try {
+        const result = await summarizeConversation(session.buffer);
+
+        const recap = {
+            id: Date.now().toString(),
+            chatId,
+            customerName: session.customerName || "Customer",
+            timestamp: Date.now(),
+            summary: result.summary,
+            category: result.category,
+            rating: finalRating || session.lastRating || null,
+            status: (finalRating && finalRating >= 4) ? "Sukses ditangani" : "Sedang Ditangani",
+            evaluation: session.lastRating < 3 ? "Perlu Evaluasi (Low Score)" : "Normal"
+        };
+
+        // If rating is very low, mark as Alert
+        if (session.lastRating && session.lastRating <= 2) {
+            recap.status = "Alert, menunggu respon CS";
+        }
+
+        // Upsert or Push? Let's Push to keep history of conversations
+        recaps.unshift(recap); // Newest first
+
+        // Save
+        await fs.writeFile(RECAP_FILE, JSON.stringify(recaps, null, 2));
+        logger.info(`Recap generated for ${chatId}: ${result.category}`);
+
+    } catch (e) {
+        logger.error("Failed to generate recap:", e);
+    }
+}
+
+export function getRecaps() {
+    return recaps;
+}
+
+// Init Hook
+export function initConversationManager() {
+    // 1. Load Survey Results
+    loadSurveyResults();
+
+    // 2. Load Recaps
+    loadRecaps();
+
+    // 3. Start periodic check for inactive conversations
+    setInterval(checkInactiveConversations, CHECK_INTERVAL);
+
+    logger.info('Conversation manager initialized (with Recaps)');
 }
 
 export default {
@@ -335,5 +421,11 @@ export default {
     initConversationManager,
     isWaitingForSurvey,
     isWaitingForFeedback,
-    recordFeedback
+    recordFeedback,
+
+    // New
+    addMessageToBuffer,
+    generateRecap,
+    getRecaps
 };
+

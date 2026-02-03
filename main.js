@@ -613,6 +613,17 @@ ipcMain.handle('resolve-evaluation', async (event, { id, action }) => {
     }
 });
 
+// Recap Handlers
+ipcMain.handle('get-recaps', async () => {
+    try {
+        const recapPath = join(DATA_DIR, 'recaps.json');
+        const data = await fs.readFile(recapPath, 'utf-8');
+        return { success: true, recaps: JSON.parse(data) };
+    } catch (error) {
+        return { success: true, recaps: [] }; // No file = no recaps
+    }
+});
+
 // App lifecycle
 app.whenReady().then(() => {
     createWindow();

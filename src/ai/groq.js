@@ -150,9 +150,59 @@ export function testOllama() {
     return isGroqAvailable();
 }
 
+/**
+ * Summarize Conversation
+ * Returns { summary, category, sentiment }
+ */
+export async function summarizeConversation(messages) {
+    if (!messages || messages.length === 0) return { summary: "Tidak ada percakapan", category: "Umum" };
+
+    const conversationText = messages.map(m => `${m.role}: ${m.text}`).join('\n');
+    const prompt = `
+    Analisa percakapan berikut ini:
+    ${conversationText}
+
+    Tugas:
+    1. Buat ringkasan singkat (max 2 kalimat) tentang apa yang user tanyakan/keluhkan.
+    2. Tentukan satu Kategori topik (misal: Administrasi, Teknis, Layanan, Umum, Keluhan).
+    
+    Format JSON only:
+    {
+        "summary": "...",
+        "category": "..."
+    }
+    `;
+
+    try {
+        const apiKey = process.env.GROQ_API_KEY || dynamicApiKey;
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                messages: [{ role: "user", content: prompt }],
+                model: "llama-3.3-70b-versatile",
+                temperature: 0.3,
+                response_format: { type: "json_object" }
+            })
+        });
+
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+        return JSON.parse(content);
+
+    } catch (e) {
+        logger.error("Summarize Error:", e);
+        return { summary: "Gagal membuat ringkasan", category: "Uncategorized" };
+    }
+}
+
 export default {
     generateResponse,
     testOllama,
     isOllamaAvailable,
-    getCustomerName
+    getCustomerName,
+    summarizeConversation
 };

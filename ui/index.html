@@ -30,6 +30,10 @@
                     📋
                     <span class="badge" id="eval-badge" style="display:none;">0</span>
                 </button>
+                <button class="nav-icon" data-view="recaps" title="Recap Percakapan">
+                    🗂️
+                    <span class="badge" id="recap-badge" style="display:none;">0</span>
+                </button>
             </div>
             <div class="nav-bottom">
                 <button class="nav-icon" data-view="settings" title="Settings">
@@ -344,6 +348,30 @@
                                 <button class="btn btn-primary" id="eval-train-btn">Simpan & Latih AI 🧠</button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Recap View -->
+            <div class="view" id="recaps-view">
+                <header class="view-header">
+                    <h2>🗂️ Recap Percakapan</h2>
+                    <div class="header-actions">
+                        <select id="recap-filter" class="styled-select">
+                            <option value="all">Semua</option>
+                            <option value="alert">Alert / Butuh Respon</option>
+                            <option value="success">Sukses</option>
+                            <option value="evaluation">Perlu Evaluasi</option>
+                        </select>
+                        <button class="btn btn-outline" id="refresh-recaps">🔄 Refresh</button>
+                    </div>
+                </header>
+
+                <div class="recap-container" id="recap-list">
+                    <!-- Recaps will be loaded here -->
+                    <div class="empty-state">
+                        <p>Memuat rekap...</p>
                     </div>
                 </div>
             </div>

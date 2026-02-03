@@ -887,3 +887,121 @@ body {
     flex-direction: column;
     gap: 20px;
 }
+
+/* Recap View Styles */
+.recap-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px 0;
+}
+
+.recap-item {
+    background: var(--bg-sidebar);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+}
+
+.recap-item:hover {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.recap-header {
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.recap-header:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.recap-main-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.recap-icon {
+    font-size: 20px;
+}
+
+.recap-title {
+    display: flex;
+    flex-direction: column;
+}
+
+.recap-user {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.recap-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.recap-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.recap-uarr {
+    transition: transform 0.2s;
+}
+
+/* Accordion Open State */
+.recap-item.active .recap-uarr {
+    transform: rotate(180deg);
+}
+
+.recap-content {
+    display: none;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid var(--border);
+}
+
+.recap-item.active .recap-content {
+    display: block;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Badges */
+.badge-gray {
+    background: #4b5563;
+    color: white;
+}
+
+.badge-success {
+    background: var(--success);
+    color: white;
+}
+
+.badge-warning {
+    background: var(--warning);
+    color: black;
+}
+
+.badge-danger {
+    background: var(--danger);
+    color: white;
+}

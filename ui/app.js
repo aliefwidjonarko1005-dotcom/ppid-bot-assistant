@@ -68,6 +68,10 @@ document.querySelectorAll('.nav-icon').forEach(item => {
             if (subSidebar) subSidebar.style.display = 'none';
             loadEvaluations();
         }
+        else if (viewId === 'recaps') {
+            if (subSidebar) subSidebar.style.display = 'none';
+            loadRecaps();
+        }
     });
 });
 
@@ -1325,6 +1329,7 @@ async function initApp() {
 
         await loadEvaluations();
         await loadInternshipData();
+        await loadRecaps(); // Load recaps and badges
         await checkApiKeyAndTour();
     } catch (e) {
         alert('CRITICAL ERROR initApp: ' + e.message);
@@ -1635,6 +1640,117 @@ if (saveInternshipBtn) {
             saveInternshipBtn.disabled = false;
         }
     });
+}
+
+// ==========================================
+// RECAP SYSTEM LOGIC
+// ==========================================
+let currentRecaps = [];
+
+// Event Listeners
+const refreshRecapsBtn = document.getElementById('refresh-recaps');
+if (refreshRecapsBtn) {
+    refreshRecapsBtn.addEventListener('click', loadRecaps);
+}
+
+const recapFilter = document.getElementById('recap-filter');
+if (recapFilter) {
+    recapFilter.addEventListener('change', () => {
+        renderRecaps(currentRecaps);
+    });
+}
+
+async function loadRecaps() {
+    const list = document.getElementById('recap-list');
+    if (!list) return; // Not on page
+
+    // Loading state if empty
+    if (currentRecaps.length === 0) list.innerHTML = '<div class="empty-state"><p>Memuat rekap...</p></div>';
+
+    try {
+        const result = await window.ppidBot.getRecaps();
+        if (result.success) {
+            currentRecaps = result.recaps || [];
+            renderRecaps(currentRecaps);
+            updateRecapBadge(currentRecaps);
+        } else {
+            if (currentRecaps.length === 0) list.innerHTML = '<div class="empty-state"><p>Gagal memuat rekap.</p></div>';
+        }
+    } catch (e) {
+        console.error("Failed to load recaps:", e);
+    }
+}
+
+function renderRecaps(recaps) {
+    const list = document.getElementById('recap-list');
+    const filter = document.getElementById('recap-filter').value;
+
+    // Filtering
+    let filtered = recaps;
+    if (filter === 'alert') {
+        filtered = recaps.filter(r => r.status && r.status.toLowerCase().includes('alert'));
+    } else if (filter === 'success') {
+        filtered = recaps.filter(r => r.status && r.status.toLowerCase().includes('sukses'));
+    } else if (filter === 'evaluation') {
+        filtered = recaps.filter(r => r.evaluation && r.evaluation.toLowerCase().includes('evaluasi'));
+    }
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<div class="empty-state"><p>Tidak ada data untuk filter ini.</p></div>';
+        return;
+    }
+
+    list.innerHTML = filtered.map(item => `
+        <div class="recap-item">
+            <div class="recap-header" onclick="this.parentElement.classList.toggle('active')">
+                <div class="recap-main-info">
+                    <span class="recap-icon">📂</span>
+                    <div class="recap-title">
+                        <strong>${item.category || 'Umum'}</strong>
+                        <span class="recap-user">${item.customerName} (${item.chatId.replace('@c.us', '')})</span>
+                    </div>
+                </div>
+                <div class="recap-meta">
+                    <span class="badge ${getStatusClass(item.status)}">${item.status}</span>
+                    <span class="recap-date">${new Date(item.timestamp).toLocaleString()}</span>
+                    <span class="recap-uarr">▼</span>
+                </div>
+            </div>
+            <div class="recap-content">
+                <div class="recap-summary">
+                    <p><strong>Ringkasan:</strong></p>
+                    <p>${item.summary}</p>
+                </div>
+                <hr style="border-color: var(--border); margin: 10px 0;">
+                <div class="recap-details">
+                    <p><strong>Rating Customer:</strong> ${item.rating ? '⭐'.repeat(item.rating) : '-'}</p>
+                    <p><strong>Evaluasi AI:</strong> ${item.evaluation}</p>
+                    <p><strong>Sentiment:</strong> ${item.rating < 3 ? '🔴 Negatif' : '🟢 Positif'}</p>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getStatusClass(status) {
+    if (!status) return 'badge-gray';
+    if (status.includes('Alert')) return 'badge-danger';
+    if (status.includes('Sukses')) return 'badge-success';
+    return 'badge-warning'; // Sedang ditangani
+}
+
+function updateRecapBadge(recaps) {
+    const badge = document.getElementById('recap-badge');
+    // Count alerts
+    const alerts = recaps.filter(r => r.status && r.status.includes('Alert')).length;
+
+    if (alerts > 0) {
+        badge.textContent = alerts;
+        badge.style.display = 'block';
+        badge.style.background = 'var(--danger)';
+    } else {
+        badge.style.display = 'none';
+    }
 }
 
 // Initial Load

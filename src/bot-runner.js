@@ -27,7 +27,8 @@ import {
     initConversationManager,
     isWaitingForFeedback,
     recordFeedback,
-    isSessionExpired
+    isSessionExpired,
+    addMessageToBuffer /* NEW */
 } from './utils/conversationManager.js';
 import config from './config.js';
 import logger from './utils/logger.js';
@@ -166,6 +167,9 @@ async function handleMessage(sock, msg) {
 
     // Update session (Mark active)
     updateSession(chatId, contact);
+
+    // Buffer User Message
+    addMessageToBuffer(chatId, 'user', text);
 
     // Notify parent of incoming message
     sendToParent('message-in', {
@@ -338,6 +342,9 @@ async function handleMessage(sock, msg) {
         // Send response
         await sock.sendMessage(chatId, { text: response });
 
+        // Buffer Bot Message
+        addMessageToBuffer(chatId, 'assistant', response);
+
         // Notify parent
         sendToParent('message-out', {
             chatId,
@@ -400,6 +407,9 @@ process.on('message', async (msg) => {
                 }
 
                 await sock.sendMessage(msg.chatId, payload);
+
+                // Buffer Manual Reply
+                addMessageToBuffer(msg.chatId, 'assistant', msg.message);
 
                 sendToParent('message-out', {
                     chatId: msg.chatId,
