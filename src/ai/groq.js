@@ -32,11 +32,19 @@ export const isOllamaAvailable = isGroqAvailable;
  * Model: llama-3.3-70b-versatile (FAST & SMART)
  * Added: humorLevel (0-100) for personality adjustment
  */
-export async function generateResponse(query, context = '', chatId = 'test', humorLevel = 0) {
-    const apiKey = process.env.GROQ_API_KEY || dynamicApiKey;
-    if (!apiKey) {
-        logger.error('GROQ API Key missing!');
-        return "Maaf, konfigurasi AI (Groq) belum lengkap. Mohon set API Key.";
+export async function generateResponse(query, context, contact, humorLevel = 0, internshipData = null) {
+    const apiKey = await getValidApiKey();
+    if (!apiKey) return "Maaf, API Key saya belum disetting. Mohon hubungi admin.";
+
+    // Format Internship Data
+    let internshipContext = "";
+    if (internshipData && Array.isArray(internshipData.departments)) {
+        internshipContext = "\n[DATA LIVE: KUOTA MAGANG (Jadikan Sumber Utama)]\n";
+        internshipData.departments.forEach((dept, index) => {
+            const sisa = dept.total - dept.filled;
+            internshipContext += `${index + 1}. ${dept.name}: Sisa ${sisa} (Total ${dept.total}, Terisi ${dept.filled})\n`;
+        });
+        internshipContext += "JIKA user bertanya soal magang/PKL, WAJIB gunakan data kuota di atas.\n";
     }
 
     // HUMOR LOGIC - DYNAMIC PERSONA
@@ -75,6 +83,7 @@ export async function generateResponse(query, context = '', chatId = 'test', hum
     [SUMBER PENGETAHUAN UTAMA]
     Gunakan informasi berikut sebagai referensi utama menjawab pertanyaan:
     ${context || '(Gunakan pengetahuan umum layanan publik & pemerintahan)'}
+    ${internshipContext}
 
     [INSTRUKSI KHUSUS]
     - Jika informasi tidak tersedia di konteks: Jawab dengan pengetahuan umum layanan publik yang logis, lalu arahkan ke kontak resmi (brida@jatengprov.go.id).

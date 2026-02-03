@@ -1,0 +1,23 @@
+{
+    "departments": [
+        {
+            "id": "sekretariat",
+            "name": "Sekretariat (Umum, Kepegawaian, Keuangan)",
+            "total": 0,
+            "filled": 0
+        },
+        {
+            "id": "litbangjirap",
+            "name": "Pengarah Litbangjirap Iptek",
+            "total": 0,
+            "filled": 0
+        },
+        {
+            "id": "invensi",
+            "name": "Pengarah Invensi Inovasi",
+            "total": 0,
+            "filled": 0
+        }
+    ],
+    "lastUpdated": ""
+}

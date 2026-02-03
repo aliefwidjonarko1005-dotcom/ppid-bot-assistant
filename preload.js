@@ -60,6 +60,13 @@ contextBridge.exposeInMainWorld('ppidBot', {
     getEvaluations: () => ipcRenderer.invoke('get-evaluations'),
     resolveEvaluation: (id, action) => ipcRenderer.invoke('resolve-evaluation', { id, action }),
 
+    // Internship Stats
+    getInternshipStats: () => ipcRenderer.invoke('get-internship-stats'),
+    updateInternshipStats: (departments) => ipcRenderer.invoke('update-internship-stats', { departments }),
+    onInternshipStats: (callback) => {
+        ipcRenderer.on('internship-stats', (event, data) => callback(data));
+    },
+
     // Settings
     getSettings: () => ipcRenderer.invoke('get-settings'),
     saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),

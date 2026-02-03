@@ -1325,6 +1325,7 @@ async function initApp() {
 
         await loadEvaluations();
         await checkApiKeyAndTour();
+        await loadInternshipUI(); // Load Internship Data
     } catch (e) {
         alert('CRITICAL ERROR initApp: ' + e.message);
         console.error(e);
@@ -1545,6 +1546,124 @@ function resetTrainingFlow() {
     trainingSendBtn.disabled = false;
     trainingInput.focus();
     lastTrainingQuestion = '';
+}
+
+// ==========================================
+// INTERNSHIP QUOTA LOGIC
+// ==========================================
+let internshipStats = { departments: [] };
+
+async function loadInternshipUI() {
+    try {
+        const res = await window.ppidBot.getInternshipStats();
+        if (res.departments) {
+            internshipStats = res;
+            renderInternshipCard();
+        }
+    } catch (e) {
+        console.error('Failed to load internship stats:', e);
+    }
+}
+
+function renderInternshipCard() {
+    const summary = document.getElementById('internship-summary');
+    if (!summary) return;
+
+    if (!internshipStats.departments || internshipStats.departments.length === 0) {
+        summary.innerHTML = '<p>Data kosong</p>';
+        return;
+    }
+
+    let totalSisa = 0;
+    internshipStats.departments.forEach(d => {
+        totalSisa += (parseInt(d.total) - parseInt(d.filled));
+    });
+
+    summary.innerHTML = `
+        <div class="stat-big">${totalSisa}</div>
+        <div class="stat-desc">Total Kuota Tersedia</div>
+        <small class="text-muted">Dari ${internshipStats.departments.length} Bidang</small>
+    `;
+}
+
+// Global scope for HTML onclick access
+window.openInternshipModal = () => {
+    const modal = document.getElementById('internship-modal');
+    const tbody = document.getElementById('internship-table-body');
+
+    if (!internshipStats.departments) return;
+
+    // Render Table
+    tbody.innerHTML = '';
+    internshipStats.departments.forEach((dept, index) => {
+        const sisa = parseInt(dept.total) - parseInt(dept.filled);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${dept.name}</td>
+            <td><input type="number" class="form-control list-input" data-idx="${index}" data-field="total" value="${dept.total}" min="0" style="width: 70px;"></td>
+            <td><input type="number" class="form-control list-input" data-idx="${index}" data-field="filled" value="${dept.filled}" min="0" style="width: 70px;"></td>
+            <td class="sisa-cell" id="sisa-${index}">${sisa}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // Add auto-calc listeners
+    document.querySelectorAll('.list-input').forEach(input => {
+        input.addEventListener('input', (e) => {
+            const idx = e.target.dataset.idx;
+            const rowInputs = document.querySelectorAll(`.list-input[data-idx="${idx}"]`);
+            const total = parseInt(rowInputs[0].value) || 0;
+            const filled = parseInt(rowInputs[1].value) || 0;
+            const sisa = total - filled;
+
+            // Visual feedback
+            const sisaCell = document.getElementById(`sisa-${idx}`);
+            sisaCell.textContent = sisa;
+            sisaCell.style.color = sisa < 0 ? 'red' : 'inherit';
+        });
+    });
+
+    modal.style.display = 'block';
+};
+
+window.closeInternshipModal = () => {
+    document.getElementById('internship-modal').style.display = 'none';
+};
+
+// Save Handler
+const saveInternshipBtn = document.getElementById('save-internship-btn');
+if (saveInternshipBtn) {
+    saveInternshipBtn.addEventListener('click', async () => {
+        // Collect Data
+        const inputs = document.querySelectorAll('.list-input');
+        const newDepts = JSON.parse(JSON.stringify(internshipStats.departments)); // Deep copy
+
+        inputs.forEach(input => {
+            const idx = input.dataset.idx;
+            const field = input.dataset.field;
+            newDepts[idx][field] = parseInt(input.value) || 0;
+        });
+
+        saveInternshipBtn.textContent = 'Menyimpan...';
+        saveInternshipBtn.disabled = true;
+
+        try {
+            const res = await window.ppidBot.updateInternshipStats(newDepts);
+            if (res.departments) {
+                internshipStats = res;
+                renderInternshipCard();
+                addLog('Data Magang berhasil diupdate', 'success');
+                window.closeInternshipModal();
+            } else {
+                alert('Gagal update');
+            }
+        } catch (e) {
+            alert('Error: ' + e.message);
+        } finally {
+            saveInternshipBtn.textContent = '💾 Simpan Perubahan';
+            saveInternshipBtn.disabled = false;
+        }
+    });
 }
 
 // Initial Load

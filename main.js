@@ -204,6 +204,12 @@ function startBot() {
                 showNotification('🆘 Permintaan CS', `${msg.name} meminta berbicara dengan admin`);
             }
         }
+        else if (msg.type === 'internship-stats') {
+            if (mainWindow) {
+                mainWindow.webContents.send('internship-stats', msg.departments ? msg : { departments: msg.departments });
+                // Ensure format consistency
+            }
+        }
     });
 
     if (mainWindow) {
@@ -268,6 +274,23 @@ ipcMain.handle('send-manual-reply', async (event, { chatId, message, media }) =>
 ipcMain.handle('release-handover', async (event, { chatId }) => {
     if (botProcess) {
         botProcess.send({ type: 'release-handover', chatId });
+        return { success: true };
+    }
+    return { success: false, error: 'Bot not running' };
+});
+
+ipcMain.handle('get-internship-stats', async () => {
+    if (botProcess) {
+        botProcess.send({ type: 'get-internship-stats' });
+        return { success: true };
+        // Stats will be sent back asynchronously via 'internship-stats' message
+    }
+    return { success: false, error: 'Bot not running' };
+});
+
+ipcMain.handle('update-internship-stats', async (event, data) => {
+    if (botProcess) {
+        botProcess.send({ type: 'update-internship-stats', data });
         return { success: true };
     }
     return { success: false, error: 'Bot not running' };
