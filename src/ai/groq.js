@@ -1,6 +1,12 @@
-
 import dotenv from 'dotenv';
 import logger from '../utils/logger.js';
+import { promises as fs } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 dotenv.config();
 
 // Memory untuk nama customer
@@ -32,19 +38,11 @@ export const isOllamaAvailable = isGroqAvailable;
  * Model: llama-3.3-70b-versatile (FAST & SMART)
  * Added: humorLevel (0-100) for personality adjustment
  */
-export async function generateResponse(query, context, contact, humorLevel = 0, internshipData = null) {
-    const apiKey = await getValidApiKey();
-    if (!apiKey) return "Maaf, API Key saya belum disetting. Mohon hubungi admin.";
-
-    // Format Internship Data
-    let internshipContext = "";
-    if (internshipData && Array.isArray(internshipData.departments)) {
-        internshipContext = "\n[DATA LIVE: KUOTA MAGANG (Jadikan Sumber Utama)]\n";
-        internshipData.departments.forEach((dept, index) => {
-            const sisa = dept.total - dept.filled;
-            internshipContext += `${index + 1}. ${dept.name}: Sisa ${sisa} (Total ${dept.total}, Terisi ${dept.filled})\n`;
-        });
-        internshipContext += "JIKA user bertanya soal magang/PKL, WAJIB gunakan data kuota di atas.\n";
+export async function generateResponse(query, context = '', chatId = 'test', humorLevel = 0) {
+    const apiKey = process.env.GROQ_API_KEY || dynamicApiKey;
+    if (!apiKey) {
+        logger.error('GROQ API Key missing!');
+        return "Maaf, konfigurasi AI (Groq) belum lengkap. Mohon set API Key.";
     }
 
     // HUMOR LOGIC - DYNAMIC PERSONA
@@ -61,11 +59,30 @@ export async function generateResponse(query, context, contact, humorLevel = 0, 
         humorInstruction = "- Nada Bicara: Formal, baku, objektif, dan sangat profesional (Standar Pemerintahan).";
     }
 
+    // [INTERNSHIP DATA LOADER]
+    let internshipContext = "";
+    try {
+        const dataPath = resolve(__dirname, '../../data/internships.json');
+        const raw = await fs.readFile(dataPath, 'utf-8');
+        const internships = JSON.parse(raw);
+
+        internshipContext = "\n\n[INFO STATUS KUOTA MAGANG TERKINI]\n";
+        internships.forEach((item, idx) => {
+            const available = item.total - item.filled;
+            const status = available > 0 ? `✅ TERSEDIA (${available} Slot)` : "❌ PENUH (0 Slot)";
+            internshipContext += `${idx + 1}. Bidang: ${item.name}\n   - Status: ${status}\n   - Jurusan Relevan: ${item.majors.join(', ')}\n`;
+        });
+        internshipContext += "\nINSTRUKSI: Jika user bertanya magang, tanya jurusan mereka dahulu. Sesuaikan rekomendasi dengan data di atas.\n";
+    } catch (e) {
+        console.error("AI Context Load Error:", e);
+    }
+
     // System Prompt Human-Like + Strict Formatting
     // System Prompt: Enhanced for Expert, Friendly, and Educative Persona
     const systemPrompt = `PERAN ANDA:
     Anda adalah "PPID Assistant", seorang Senior Customer Service & Konsultan Publik untuk BRIDA Provinsi Jawa Tengah.
     Anda dikenal sangat ahli, ramah, sabar, dan memiliki kemampuan menjelaskan hal teknis agar mudah dipahami masyarakat awam.
+    ${internshipContext}
 
     [GAYA BICARA & KEPRIBADIAN]
     1.  **Sangat Ramah & Hangat**: Sapa pengguna dengan sopan. Gunakan kata-kata yang membuat nyaman (misal: "Baik Kak", "Tentu saja", "Senang bisa membantu").
@@ -83,7 +100,6 @@ export async function generateResponse(query, context, contact, humorLevel = 0, 
     [SUMBER PENGETAHUAN UTAMA]
     Gunakan informasi berikut sebagai referensi utama menjawab pertanyaan:
     ${context || '(Gunakan pengetahuan umum layanan publik & pemerintahan)'}
-    ${internshipContext}
 
     [INSTRUKSI KHUSUS]
     - Jika informasi tidak tersedia di konteks: Jawab dengan pengetahuan umum layanan publik yang logis, lalu arahkan ke kontak resmi (brida@jatengprov.go.id).

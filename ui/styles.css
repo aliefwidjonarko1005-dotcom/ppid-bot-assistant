@@ -864,3 +864,14 @@ body {
         background: rgba(239, 68, 68, 0.4);
     }
 }
+
+/* Missing Containers */
+.training-container,
+.settings-container {
+    padding: 20px;
+    height: 100%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}

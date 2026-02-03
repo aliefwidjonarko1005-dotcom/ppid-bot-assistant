@@ -1,0 +1,46 @@
+[
+  {
+    "id": "sekretariat",
+    "name": "Sekretariat (Umum, Kepegawaian, Keuangan)",
+    "total": 10,
+    "filled": 9,
+    "majors": [
+      "Administrasi Perkantoran",
+      "Manajemen",
+      "Akuntansi",
+      "Hukum",
+      "Ilmu Komunikasi",
+      "Psikologi"
+    ]
+  },
+  {
+    "id": "litbang",
+    "name": "Pengarah Litbangjirap Iptek",
+    "total": 5,
+    "filled": 3,
+    "majors": [
+      "Teknik Informasi",
+      "Ilmu Komputer",
+      "Sains Data",
+      "Statistika",
+      "Teknik Mesin",
+      "Teknik Elektro",
+      "Biologi",
+      "Kimia",
+      "Fisika"
+    ]
+  },
+  {
+    "id": "inovasi",
+    "name": "Pengarah Invensi Inovasi",
+    "total": 5,
+    "filled": 0,
+    "majors": [
+      "Desain Produk",
+      "Teknik Industri",
+      "Manajemen Bisnis",
+      "DKV",
+      "Hubungan Internasional"
+    ]
+  }
+]

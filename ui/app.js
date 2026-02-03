@@ -1324,8 +1324,8 @@ async function initApp() {
         });
 
         await loadEvaluations();
+        await loadInternshipData();
         await checkApiKeyAndTour();
-        await loadInternshipUI(); // Load Internship Data
     } catch (e) {
         alert('CRITICAL ERROR initApp: ' + e.message);
         console.error(e);
@@ -1549,116 +1549,87 @@ function resetTrainingFlow() {
 }
 
 // ==========================================
-// INTERNSHIP QUOTA LOGIC
+// INTERNSHIP QUOTA MANAGEMENT
 // ==========================================
-let internshipStats = { departments: [] };
+let internshipData = [];
 
-async function loadInternshipUI() {
+async function loadInternshipData() {
     try {
-        const res = await window.ppidBot.getInternshipStats();
-        if (res.departments) {
-            internshipStats = res;
-            renderInternshipCard();
+        const data = await window.ppidBot.getInternships();
+        if (Array.isArray(data)) {
+            internshipData = data;
+            renderInternshipTable();
         }
     } catch (e) {
-        console.error('Failed to load internship stats:', e);
+        console.error("Failed to load internships:", e);
     }
 }
 
-function renderInternshipCard() {
-    const summary = document.getElementById('internship-summary');
-    if (!summary) return;
+function renderInternshipTable() {
+    const tbody = document.getElementById('internship-tbody');
+    if (!tbody) return;
 
-    if (!internshipStats.departments || internshipStats.departments.length === 0) {
-        summary.innerHTML = '<p>Data kosong</p>';
-        return;
-    }
-
-    let totalSisa = 0;
-    internshipStats.departments.forEach(d => {
-        totalSisa += (parseInt(d.total) - parseInt(d.filled));
-    });
-
-    summary.innerHTML = `
-        <div class="stat-big">${totalSisa}</div>
-        <div class="stat-desc">Total Kuota Tersedia</div>
-        <small class="text-muted">Dari ${internshipStats.departments.length} Bidang</small>
-    `;
-}
-
-// Global scope for HTML onclick access
-window.openInternshipModal = () => {
-    const modal = document.getElementById('internship-modal');
-    const tbody = document.getElementById('internship-table-body');
-
-    if (!internshipStats.departments) return;
-
-    // Render Table
     tbody.innerHTML = '';
-    internshipStats.departments.forEach((dept, index) => {
-        const sisa = parseInt(dept.total) - parseInt(dept.filled);
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${dept.name}</td>
-            <td><input type="number" class="form-control list-input" data-idx="${index}" data-field="total" value="${dept.total}" min="0" style="width: 70px;"></td>
-            <td><input type="number" class="form-control list-input" data-idx="${index}" data-field="filled" value="${dept.filled}" min="0" style="width: 70px;"></td>
-            <td class="sisa-cell" id="sisa-${index}">${sisa}</td>
+    internshipData.forEach((item, index) => {
+        const available = item.total - item.filled;
+        const statusColor = available > 0 ? 'var(--success)' : 'var(--danger)';
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td style="padding: 10px;">${item.name}</td>
+            <td style="padding: 10px;"><input type="number" class="form-control form-control-sm intern-total" data-index="${index}" value="${item.total}" min="0" style="width: 70px;"></td>
+            <td style="padding: 10px;"><input type="number" class="form-control form-control-sm intern-filled" data-index="${index}" value="${item.filled}" min="0" max="${item.total}" style="width: 70px;"></td>
+            <td style="padding: 10px; font-weight: bold; color: ${statusColor};">${available}</td>
+            <td style="padding: 10px; font-size: 0.9em; color: var(--text-secondary);">${item.majors.join(', ')}</td>
         `;
-        tbody.appendChild(tr);
+        tbody.appendChild(row);
     });
 
-    // Add auto-calc listeners
-    document.querySelectorAll('.list-input').forEach(input => {
-        input.addEventListener('input', (e) => {
-            const idx = e.target.dataset.idx;
-            const rowInputs = document.querySelectorAll(`.list-input[data-idx="${idx}"]`);
-            const total = parseInt(rowInputs[0].value) || 0;
-            const filled = parseInt(rowInputs[1].value) || 0;
-            const sisa = total - filled;
+    // Re-attach listeners for auto-calc UI updates (optimistic)
+    document.querySelectorAll('.intern-total, .intern-filled').forEach(input => {
+        input.addEventListener('input', () => {
+            // instant visual update of "Sisa"
+            const row = input.closest('tr');
+            const total = parseInt(row.querySelector('.intern-total').value) || 0;
+            const filled = parseInt(row.querySelector('.intern-filled').value) || 0;
+            const remaining = total - filled;
 
-            // Visual feedback
-            const sisaCell = document.getElementById(`sisa-${idx}`);
-            sisaCell.textContent = sisa;
-            sisaCell.style.color = sisa < 0 ? 'red' : 'inherit';
+            // Limit filled to total?
+            // if (filled > total) row.querySelector('.intern-filled').value = total;
+
+            const cell = row.children[3]; // Sisa cell
+            cell.textContent = remaining;
+            cell.style.color = remaining > 0 ? 'var(--success)' : 'var(--danger)';
         });
     });
+}
 
-    modal.style.display = 'block';
-};
-
-window.closeInternshipModal = () => {
-    document.getElementById('internship-modal').style.display = 'none';
-};
-
-// Save Handler
 const saveInternshipBtn = document.getElementById('save-internship-btn');
 if (saveInternshipBtn) {
     saveInternshipBtn.addEventListener('click', async () => {
-        // Collect Data
-        const inputs = document.querySelectorAll('.list-input');
-        const newDepts = JSON.parse(JSON.stringify(internshipStats.departments)); // Deep copy
-
-        inputs.forEach(input => {
-            const idx = input.dataset.idx;
-            const field = input.dataset.field;
-            newDepts[idx][field] = parseInt(input.value) || 0;
-        });
-
         saveInternshipBtn.textContent = 'Menyimpan...';
         saveInternshipBtn.disabled = true;
 
         try {
-            const res = await window.ppidBot.updateInternshipStats(newDepts);
-            if (res.departments) {
-                internshipStats = res;
-                renderInternshipCard();
-                addLog('Data Magang berhasil diupdate', 'success');
-                window.closeInternshipModal();
-            } else {
-                alert('Gagal update');
-            }
+            // Collect data from inputs
+            const newInternshipData = [...internshipData];
+            const rows = document.querySelectorAll('#internship-tbody tr');
+
+            rows.forEach((row, idx) => {
+                const total = parseInt(row.querySelector('.intern-total').value) || 0;
+                const filled = parseInt(row.querySelector('.intern-filled').value) || 0;
+
+                newInternshipData[idx].total = total;
+                newInternshipData[idx].filled = filled;
+            });
+
+            // Save to Backend
+            await window.ppidBot.saveInternships(newInternshipData);
+            internshipData = newInternshipData;
+
+            addLog('Data Kuota Magang berhasil diupdate!', 'success');
+            renderInternshipTable(); // Re-render to ensure clean state
         } catch (e) {
-            alert('Error: ' + e.message);
+            alert('Gagal menyimpan: ' + e.message);
         } finally {
             saveInternshipBtn.textContent = '💾 Simpan Perubahan';
             saveInternshipBtn.disabled = false;

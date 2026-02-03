@@ -42,40 +42,6 @@ const __dirname = dirname(__filename);
 // Track chats for takeover
 const pendingTakeovers = new Map();
 
-// Internship Data
-let internshipData = { departments: [] };
-const internshipDataPath = join(process.env.DATA_PATH || config.paths.data || join(__dirname, '..', 'data'), 'internship.json');
-
-async function loadInternshipData() {
-    try {
-        const data = await fs.readFile(internshipDataPath, 'utf8');
-        internshipData = JSON.parse(data);
-        logger.info('Internship data loaded');
-    } catch (e) {
-        logger.warn('Internship data not found or invalid, using defaults');
-        // Default structure
-        internshipData = {
-            departments: [
-                { id: "sekretariat", name: "Sekretariat (Umum, Kepegawaian, Keuangan)", total: 0, filled: 0 },
-                { id: "litbangjirap", "name": "Pengarah Litbangjirap Iptek", total: 0, filled: 0 },
-                { id: "invensi", name: "Pengarah Invensi Inovasi", total: 0, filled: 0 }
-            ],
-            lastUpdated: new Date().toISOString()
-        };
-        await saveInternshipData();
-    }
-}
-
-async function saveInternshipData() {
-    try {
-        internshipData.lastUpdated = new Date().toISOString();
-        await fs.writeFile(internshipDataPath, JSON.stringify(internshipData, null, 2));
-    } catch (e) {
-        logger.error('Failed to save internship data:', e);
-    }
-}
-
-
 // Global socket reference
 let globalSock = null;
 
@@ -347,7 +313,7 @@ async function handleMessage(sock, msg) {
         logger.info(`Context length: ${context.length}`);
 
         // Generate response
-        let response = await generateResponse(text, context, chatId, currentSettings.humorLevel, internshipData);
+        let response = await generateResponse(text, context, chatId, currentSettings.humorLevel);
 
         // Track last question for learning
         const sess = getSession(chatId);
@@ -484,7 +450,7 @@ process.on('message', async (msg) => {
                     context = await queryRAG(msg.text);
                 }
 
-                const response = await generateResponse(msg.text, context, 'test-user', currentSettings.humorLevel, internshipData); // Pass internship data
+                const response = await generateResponse(msg.text, context, 'test-user', currentSettings.humorLevel);
                 sendToParent('test-prompt-response', { text: response });
             } catch (error) {
                 sendToParent('test-prompt-response', { text: "Error: " + error.message });
@@ -511,20 +477,6 @@ process.on('message', async (msg) => {
             logger.info(`Releasing handover for ${msg.chatId}`);
             pendingTakeovers.delete(msg.chatId);
             break;
-
-        case 'get-internship-stats':
-            sendToParent('internship-stats', internshipData);
-            break;
-
-        case 'update-internship-stats':
-            logger.info('Updating internship stats');
-            if (msg.data && Array.isArray(msg.data.departments)) {
-                internshipData.departments = msg.data.departments;
-                await saveInternshipData();
-                sendToParent('internship-stats', internshipData); // Broadcast back
-            }
-            break;
-
     }
 });
 
@@ -536,7 +488,6 @@ async function main() {
 
     // Load settings
     await loadSettings();
-    await loadInternshipData();
 
     try {
         // Test AI
