@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Notification, Tray, Menu, nativeImage, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, Notification, Tray, Menu, nativeImage, shell, dialog } from 'electron';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { fork, spawn } from 'child_process';
@@ -621,6 +621,54 @@ ipcMain.handle('get-recaps', async () => {
         return { success: true, recaps: JSON.parse(data) };
     } catch (error) {
         return { success: true, recaps: [] }; // No file = no recaps
+    }
+});
+
+ipcMain.handle('export-recaps-csv', async () => {
+    try {
+        const recapPath = join(DATA_DIR, 'recaps.json');
+        let recaps = [];
+        try {
+            const data = await fs.readFile(recapPath, 'utf-8');
+            recaps = JSON.parse(data);
+        } catch { }
+
+        if (!recaps || recaps.length === 0) return { success: false, error: 'Tidak ada data rekap' };
+
+        // CSV Generation
+        const headers = ['Timestamp', 'Nama Customer', 'Kategori', 'Status', 'Rating', 'Evaluasi AI', 'Ringkasan', 'Chat ID'];
+        const clean = (text) => text ? `"${String(text).replace(/"/g, '""')}"` : '""';
+
+        let csv = headers.join(',') + '\n';
+
+        csv += recaps.map(r => {
+            return [
+                clean(new Date(r.timestamp).toLocaleString('id-ID')),
+                clean(r.customerName),
+                clean(r.category),
+                clean(r.status),
+                clean(r.rating || ''),
+                clean(r.evaluation),
+                clean(r.summary),
+                clean(r.chatId)
+            ].join(',');
+        }).join('\n');
+
+        // Save Dialog
+        const { filePath } = await dialog.showSaveDialog(mainWindow, {
+            title: 'Export Data Recap',
+            defaultPath: `recap_ppid_${Date.now()}.csv`,
+            filters: [{ name: 'CSV File', extensions: ['csv'] }]
+        });
+
+        if (filePath) {
+            await fs.writeFile(filePath, csv, 'utf-8');
+            return { success: true, path: filePath };
+        }
+        return { success: false, error: 'Dibatalkan' };
+
+    } catch (error) {
+        return { success: false, error: error.message };
     }
 });
 

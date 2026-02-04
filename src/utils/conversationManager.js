@@ -5,6 +5,9 @@
 
 import logger from '../utils/logger.js';
 import { summarizeConversation } from '../ai/groq.js';
+import { promises as fs } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 // Conversation sessions: chatId -> { lastActivity, surveyPending, messageCount, buffer: [] }
 const sessions = new Map();
@@ -296,10 +299,6 @@ function checkInactiveConversations() {
 /**
  * Save survey results to file
  */
-import { promises as fs } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const SURVEY_FILE = join(process.env.DATA_PATH || join(__dirname, '../../data'), 'survey_results.json');
@@ -326,6 +325,15 @@ async function loadSurveyResults() {
         // File doesn't exist yet, that's OK
     }
 }
+
+/**
+ * Check if waiting for survey
+ */
+export function isWaitingForSurvey(chatId) {
+    return sessions.get(chatId)?.surveyPending || false;
+}
+
+
 
 /**
  * Initialize conversation manager

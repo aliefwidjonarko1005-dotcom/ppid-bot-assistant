@@ -62,6 +62,7 @@ contextBridge.exposeInMainWorld('ppidBot', {
 
     // Recaps
     getRecaps: () => ipcRenderer.invoke('get-recaps'),
+    exportRecapsCsv: () => ipcRenderer.invoke('export-recaps-csv'),
 
     // Internship Data
     getInternships: () => ipcRenderer.invoke('get-internship-data'),

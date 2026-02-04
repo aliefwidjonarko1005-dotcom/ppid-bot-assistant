@@ -1584,7 +1584,9 @@ function renderInternshipTable() {
             <td style="padding: 10px;"><input type="number" class="form-control form-control-sm intern-total" data-index="${index}" value="${item.total}" min="0" style="width: 70px;"></td>
             <td style="padding: 10px;"><input type="number" class="form-control form-control-sm intern-filled" data-index="${index}" value="${item.filled}" min="0" max="${item.total}" style="width: 70px;"></td>
             <td style="padding: 10px; font-weight: bold; color: ${statusColor};">${available}</td>
-            <td style="padding: 10px; font-size: 0.9em; color: var(--text-secondary);">${item.majors.join(', ')}</td>
+            <td style="padding: 10px;">
+                <input type="text" class="form-control form-control-sm intern-majors" data-index="${index}" value="${item.majors.join(', ')}" placeholder="Contoh: TI, DKV, Elektro">
+            </td>
         `;
         tbody.appendChild(row);
     });
@@ -1622,9 +1624,14 @@ if (saveInternshipBtn) {
             rows.forEach((row, idx) => {
                 const total = parseInt(row.querySelector('.intern-total').value) || 0;
                 const filled = parseInt(row.querySelector('.intern-filled').value) || 0;
+                const majorsStr = row.querySelector('.intern-majors').value;
+
+                // Parse Majors (comma separated)
+                const majors = majorsStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
 
                 newInternshipData[idx].total = total;
                 newInternshipData[idx].filled = filled;
+                newInternshipData[idx].majors = majors;
             });
 
             // Save to Backend
@@ -1657,6 +1664,30 @@ const recapFilter = document.getElementById('recap-filter');
 if (recapFilter) {
     recapFilter.addEventListener('change', () => {
         renderRecaps(currentRecaps);
+    });
+}
+
+const exportRecapsBtn = document.getElementById('export-recaps');
+if (exportRecapsBtn) {
+    exportRecapsBtn.addEventListener('click', async () => {
+        exportRecapsBtn.disabled = true;
+        exportRecapsBtn.textContent = '⏳ Exporting...';
+
+        try {
+            const result = await window.ppidBot.exportRecapsCsv();
+            if (result.success) {
+                alert('Export Berhasil!\nDisimpan di: ' + result.path);
+            } else {
+                if (result.error !== 'Dibatalkan') {
+                    alert('Gagal Export: ' + result.error);
+                }
+            }
+        } catch (e) {
+            alert('Error export: ' + e.message);
+        } finally {
+            exportRecapsBtn.disabled = false;
+            exportRecapsBtn.textContent = '📥 Export CSV';
+        }
     });
 }
 
