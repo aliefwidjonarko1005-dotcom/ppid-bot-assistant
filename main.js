@@ -159,57 +159,31 @@ function startBot() {
     // HANDLE EXIT
     botProcess.on('exit', (code) => {
         console.log(`Bot process exited with code ${code}`);
-        if (code !== 0 && mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('bot-error', `Bot process exited with code ${code}`);
-            mainWindow.webContents.send('bot-status', { running: false });
-        }
+        botProcess = null;
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('bot-status', 'stopped');
     });
 
-    // HANDLE SPAWN ERROR
-    botProcess.on('error', (err) => {
-        console.error('Failed to start bot:', err);
-        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('bot-error', `Failed to spawn: ${err.message}`);
-    });
-
+    // LISTEN FOR IPC MESSAGES FROM CHILD (Notifications/QR)
     botProcess.on('message', (msg) => {
-        // DEBUG: Trace all messages
-        console.log('[IPC RAW]', msg.type);
-
-        if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('bot-message', msg);
+        if (msg.type === 'qr') {
+            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('qr-code', msg.qr);
+        } else if (msg.type === 'status') {
+            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('bot-status', msg.status);
+        } else if (msg.type === 'log') {
+            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('bot-log', msg.data);
         }
-
-        // Handle special notifications
-        if (msg.type === 'alert') {
-            showNotification(msg.title, msg.body);
-        }
-
-        // Handle logout
-        if (msg.type === 'logged-out') {
-            if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('bot-status', { running: false });
-                mainWindow.webContents.send('bot-message', { type: 'logged-out' });
-            }
-        }
-        else if (msg.type === 'survey-update') {
-            if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('survey-stats', msg);
-            }
-        }
-        // Handle CS/Admin handover request
-        else if (msg.type === 'handover-request') {
-            console.log('[HANDOVER] Request received from:', msg.name);
-            if (mainWindow) {
-                mainWindow.webContents.send('handover-request', msg);
-                // Show desktop notification
-                showNotification('🆘 Permintaan CS', `${msg.name} meminta berbicara dengan admin`);
+        // [FEATURE] Windows Notification
+        else if (msg.type === 'notification') {
+            console.log(`[NOTIF] ${msg.title}: ${msg.body}`);
+            if (Notification.isSupported()) {
+                new Notification({
+                    title: msg.title || 'PPID Bot',
+                    body: msg.body || 'Pesan Baru',
+                    icon: join(__dirname, 'assets/icon.png')
+                }).show();
             }
         }
     });
-
-    if (mainWindow) {
-        mainWindow.webContents.send('bot-status', { running: true });
-    }
 }
 
 /**
