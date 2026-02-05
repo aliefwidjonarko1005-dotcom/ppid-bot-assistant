@@ -1752,6 +1752,20 @@ if (exportRecapsBtn) {
     });
 }
 
+// Event Delegation for Recap List (Fix CSP blocking inline onclick)
+const recapList = document.getElementById('recap-list');
+if (recapList) {
+    recapList.addEventListener('click', (e) => {
+        const header = e.target.closest('.recap-header');
+        if (header && header.dataset.action === 'toggle-recap') {
+            const item = header.closest('.recap-item');
+            if (item) {
+                item.classList.toggle('active');
+            }
+        }
+    });
+}
+
 async function loadRecaps() {
     const list = document.getElementById('recap-list');
     if (!list) return; // Not on page
@@ -1794,7 +1808,7 @@ function renderRecaps(recaps) {
 
     list.innerHTML = filtered.map(item => `
         <div class="recap-item">
-            <div class="recap-header" onclick="this.parentElement.classList.toggle('active')">
+            <div class="recap-header" data-action="toggle-recap">
                 <div class="recap-main-info">
                     <span class="recap-icon">📂</span>
                     <div class="recap-title">
