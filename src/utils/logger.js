@@ -34,25 +34,33 @@ function maskPhone(phone) {
 export const logger = {
     debug: (...args) => {
         if (currentLevel <= LOG_LEVELS.debug) {
-            console.log(`[${getTimestamp()}] [DEBUG]`, ...args);
+            const msg = `[${getTimestamp()}] [DEBUG] ${args.join(' ')}`;
+            console.log(msg);
+            if (process.send) process.send({ type: 'log', data: msg });
         }
     },
 
     info: (...args) => {
         if (currentLevel <= LOG_LEVELS.info) {
-            console.log(`[${getTimestamp()}] [INFO]`, ...args);
+            const msg = `[${getTimestamp()}] [INFO] ${args.join(' ')}`;
+            console.log(msg);
+            if (process.send) process.send({ type: 'log', data: msg });
         }
     },
 
     warn: (...args) => {
         if (currentLevel <= LOG_LEVELS.warn) {
-            console.warn(`[${getTimestamp()}] [WARN]`, ...args);
+            const msg = `[${getTimestamp()}] [WARN] ${args.join(' ')}`;
+            console.warn(msg);
+            if (process.send) process.send({ type: 'log', data: msg });
         }
     },
 
     error: (...args) => {
         if (currentLevel <= LOG_LEVELS.error) {
-            console.error(`[${getTimestamp()}] [ERROR]`, ...args);
+            const msg = `[${getTimestamp()}] [ERROR] ${args.join(' ')}`;
+            console.error(msg);
+            if (process.send) process.send({ type: 'log', data: msg });
         }
     },
 
@@ -61,7 +69,9 @@ export const logger = {
         if (currentLevel <= LOG_LEVELS.info) {
             const masked = maskPhone(from);
             const shortPreview = preview?.slice(0, 50) || '';
-            console.log(`[${getTimestamp()}] [MSG] ${masked} | ${type} | ${shortPreview}${preview?.length > 50 ? '...' : ''}`);
+            const msg = `[${getTimestamp()}] [MSG] ${masked} | ${type} | ${shortPreview}${preview?.length > 50 ? '...' : ''}`;
+            console.log(msg);
+            if (process.send) process.send({ type: 'log', data: msg });
         }
     },
 };

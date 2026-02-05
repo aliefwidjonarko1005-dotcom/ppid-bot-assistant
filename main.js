@@ -163,17 +163,24 @@ function startBot() {
         if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('bot-status', 'stopped');
     });
 
-    // LISTEN FOR IPC MESSAGES FROM CHILD (Notifications/QR)
+    // LISTEN FOR IPC MESSAGES FROM CHILD (Notifications/QR/Logs/Chats)
     botProcess.on('message', (msg) => {
-        if (msg.type === 'qr') {
-            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('qr-code', msg.qr);
-        } else if (msg.type === 'status') {
-            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('bot-status', msg.status);
-        } else if (msg.type === 'log') {
-            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('bot-log', msg.data);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            // 1. Forward EVERYTHING to 'bot-message' channel (Primary UI Listener)
+            // This fixes Chats, QR, Alerts, etc.
+            mainWindow.webContents.send('bot-message', msg);
+
+            // 2. Specific Channels helpers
+            if (msg.type === 'status') {
+                mainWindow.webContents.send('bot-status', msg.status);
+            }
+            else if (msg.type === 'log') {
+                mainWindow.webContents.send('bot-log', msg.data);
+            }
         }
-        // [FEATURE] Windows Notification
-        else if (msg.type === 'notification') {
+
+        // [FEATURE] Windows Notification (Main Process Logic)
+        if (msg.type === 'notification') {
             console.log(`[NOTIF] ${msg.title}: ${msg.body}`);
             if (Notification.isSupported()) {
                 new Notification({
