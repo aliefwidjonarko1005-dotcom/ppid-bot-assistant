@@ -188,12 +188,10 @@ async function handleMessage(sock, msg) {
     if (isRequestingHuman(text)) {
         logger.info(`Handover request detected from ${chatId}`);
 
-        // Notify admin
-        sendToParent('handover-request', {
+        // Notify admin via Alert (Standardized)
+        sendToParent('alert', {
             chatId,
-            name: contact,
-            text: text,
-            timestamp: new Date().toISOString()
+            reason: `Permintaan CS dari ${contact}: "${text}"`
         });
 
         // Send message to customer
@@ -203,6 +201,8 @@ async function handleMessage(sock, msg) {
 
         // Mark as pending takeover
         pendingTakeovers.set(chatId, true);
+
+        // Also mark as alert in local session if possible, but UI update handles it.
         return;
     }
 
