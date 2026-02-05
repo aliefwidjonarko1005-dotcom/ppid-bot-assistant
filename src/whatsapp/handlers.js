@@ -70,16 +70,20 @@ async function processTextMessage(query) {
 /**
  * Check if user is asking for Human CS
  */
+/**
+ * Check if user is asking for Human CS
+ */
 function checkHumanHandover(text, chatId, senderName) {
     const keywords = /\b(admin|cs|manusia|orang|bantuan|help|tolong)\b/i;
     if (keywords.test(text)) {
         if (process.send) {
+            // [FIX] Send as 'alert' to trigger UI Stats Update + Notification
             process.send({
-                type: 'notification',
-                title: '🚨 Permintaan CS / Admin',
-                body: `User ${senderName || chatId} meminta bantuan admin:\n"${text}"`
+                type: 'alert',
+                chatId: chatId,
+                reason: `Permintaan CS dari ${senderName || 'User'}: "${text.slice(0, 50)}"`
             });
-            logger.info(`[NOTIF] Sent notification request for ${chatId}`);
+            logger.info(`[NOTIF] Sent alert request for ${chatId}`);
         }
     }
 }
@@ -119,6 +123,16 @@ export async function handleIncomingMessage(sock, msg) {
     if (isWaitingForSurvey(chatId)) {
         if (isSurveyResponse(text)) {
             const needsFeedback = recordSurvey(chatId, text);
+
+            // [FIX] Broadcast new stats to UI
+            if (process.send) {
+                const { getSurveyStats } = await import('../utils/conversationManager.js');
+                process.send({
+                    type: 'survey-update',
+                    data: getSurveyStats()
+                });
+            }
+
             if (needsFeedback) {
                 await sock.sendMessage(chatId, { text: "Mohon maaf atas ketidaknyamanan ini. Apa yang bisa kami perbaiki? (Ketik masukan Anda)" });
             } else {
@@ -126,9 +140,6 @@ export async function handleIncomingMessage(sock, msg) {
             }
             return;
         }
-        // If not a valid number, we ignore specific survey flow and let AI handle it? 
-        // Or we re-ask? Let's just pass to AI but maybe AI will be confused. 
-        // Ideally, if survey pending, we might want to be strict, but for now let's be loose.
     }
 
     // Rate limiting

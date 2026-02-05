@@ -243,8 +243,49 @@ window.ppidBot.onBotMessage((msg) => {
             qrContainer.innerHTML = '<div class="qr-placeholder"><p>Logout berhasil. Klik Start Bot untuk scan QR baru.</p></div>';
             addLog('Logout berhasil', 'info');
             break;
+
+        case 'survey-update':
+            updateSurveyUI(msg.data);
+            break;
     }
 });
+
+// Update Survey UI
+function updateSurveyUI(data) {
+    if (!data) return;
+
+    // Update Average & Count
+    const avgEl = document.getElementById('survey-avg');
+    const countEl = document.getElementById('survey-count');
+
+    if (avgEl) avgEl.textContent = data.average || '0.0';
+    if (countEl) countEl.textContent = data.total || '0';
+
+    // Update Chart (Simple Bar Visualization)
+    const chartContainer = document.getElementById('survey-chart');
+    if (chartContainer && data.distribution) {
+        chartContainer.innerHTML = ''; // Clear placeholder
+
+        const maxVal = Math.max(...data.distribution);
+        const bars = data.distribution.map((count, index) => {
+            const star = index + 1;
+            const percentage = maxVal > 0 ? (count / maxVal) * 100 : 0;
+            // Handle edge case where maxVal is 0 (all zeros) logic is fine
+
+            return `
+                <div class="chart-bar-row" style="display:flex; align-items:center; margin-bottom:4px; font-size:12px;">
+                    <span style="width:15px;">${star}⭐</span>
+                    <div style="flex:1; background: var(--bg-hover); height:8px; margin:0 8px; border-radius:4px; overflow:hidden;">
+                        <div style="width:${percentage}%; background: var(--primary); height:100%;"></div>
+                    </div>
+                    <span style="width:20px; text-align:right;">${count}</span>
+                </div>
+            `;
+        }).reverse().join(''); // 5 stars on top
+
+        chartContainer.innerHTML = bars;
+    }
+}
 
 window.ppidBot.onBotLog((log) => {
     addLog(log.trim(), 'info');
@@ -257,6 +298,26 @@ window.ppidBot.onBotError((err) => {
 window.ppidBot.onBotStatus((status) => {
     updateBotStatus(status.running);
 });
+
+// Show Internal Notification (Toast)
+function showDesktopNotification(title, body) {
+    if (Notification.permission === 'granted') {
+        new Notification(title, { body });
+    } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                new Notification(title, { body });
+            }
+        });
+    }
+
+    // Also show in-app toast if needed
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.innerHTML = `<strong>${title}</strong><p>${body}</p>`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 5000);
+}
 
 // Chat functions
 function addChat(chatId, name, text, direction, needsReview = false) {
