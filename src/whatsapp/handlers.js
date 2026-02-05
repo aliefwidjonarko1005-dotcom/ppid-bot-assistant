@@ -3,7 +3,14 @@ import logger from '../utils/logger.js';
 import { applyHumanDelay, rateLimiter } from '../utils/rateLimiter.js';
 import { queryRAG, isVectorStoreReady } from '../rag/retriever.js';
 import { generateResponse, isOllamaAvailable } from '../ai/ollama.js';
-import { addMessageToBuffer } from '../utils/conversationManager.js';
+import {
+    addMessageToBuffer,
+    isWaitingForFeedback,
+    isWaitingForSurvey,
+    isSurveyResponse,
+    recordSurvey,
+    recordFeedback
+} from '../utils/conversationManager.js';
 
 /**
  * Extract text content from message
@@ -101,6 +108,28 @@ export async function handleIncomingMessage(sock, msg) {
 
     // [FEATURE] Check Notifications
     checkHumanHandover(text, chatId, msg.pushName);
+
+    // [LOGIC] Check for Survey/Feedback Response
+    if (isWaitingForFeedback(chatId)) {
+        await recordFeedback(chatId, text);
+        await sock.sendMessage(chatId, { text: "Terima kasih atas masukan Anda! Kami akan terus berbenah. 🙏" });
+        return;
+    }
+
+    if (isWaitingForSurvey(chatId)) {
+        if (isSurveyResponse(text)) {
+            const needsFeedback = recordSurvey(chatId, text);
+            if (needsFeedback) {
+                await sock.sendMessage(chatId, { text: "Mohon maaf atas ketidaknyamanan ini. Apa yang bisa kami perbaiki? (Ketik masukan Anda)" });
+            } else {
+                await sock.sendMessage(chatId, { text: "Terima kasih atas penilaian Anda! Senang bisa membantu. 😊" });
+            }
+            return;
+        }
+        // If not a valid number, we ignore specific survey flow and let AI handle it? 
+        // Or we re-ask? Let's just pass to AI but maybe AI will be confused. 
+        // Ideally, if survey pending, we might want to be strict, but for now let's be loose.
+    }
 
     // Rate limiting
     if (!rateLimiter.canProcess(chatId)) {
